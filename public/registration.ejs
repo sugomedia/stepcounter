@@ -1,0 +1,30 @@
+<%- include('header') %>
+
+<main class="form-signin">
+    
+    <form  action="/reg" method="POST">
+        <h1 class="h3 mb-3 fw-normal">Register a new user</h1>
+        <% if (eMsg) {
+            %> <em> <%= eMsg %> </em> <%
+        } %>
+        <div class="form-group">
+            <input type="text" class="form-control" name="name" placeholder="Username" required>
+        </div>
+        <div class="form-group">
+            <input type="email" class="form-control" name="email" placeholder="E-mail address" required>
+        </div>
+        <div class="form-group">
+            <input type="password" class="form-control" name="pass1" placeholder="Password" required>  
+        </div>
+        <div class="form-group">
+            <input type="password" class="form-control" name="pass2" placeholder="Password confirm" required>  
+        </div>
+        <div class="form-group">
+            <input class="btn btn-lg btn-primary" type="submit" value="Register">
+        </div>
+    </form>
+    <br>
+    <a href="/">Back to login...</a>
+  </main>
+
+<%- include('footer') %>
