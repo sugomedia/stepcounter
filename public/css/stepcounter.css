@@ -2,6 +2,11 @@ body{
     background-color: silver;
 }
 
+header{
+    background-color: black;
+    color: white;
+    padding: 15px;
+}
 .form-signin {
     width: 100%;
     max-width: 330px;
@@ -36,4 +41,33 @@ body{
       color: red;
       font-weight: bold;
       padding-bottom: 10px;
+  }
+
+  .menu{
+      list-style-type: none;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: slategrey;
+  }
+
+  .menu li{
+      display: inline-block;
+  }
+
+  .menu li a{
+      display: block;
+      text-decoration: none;
+      cursor: pointer;
+      padding: 6px;
+      color: white;
+      text-shadow: 0 0 2px black;
+      transition: 0.6s all;
+  }
+
+  .menu li a:hover{
+      background-color: black;
+      color: white;
+      transition: 0.3s all;
+
   }

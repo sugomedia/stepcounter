@@ -1,0 +1,27 @@
+<%- include('header') %>
+
+<%- include('menu') %>
+ 
+<main class="form-signin">
+    <form action="/passmod" method="POST">
+        <h1 class="h3 mb-3 fw-normal">Password change</h1>
+        <% if (eMsg) {
+            %> <em> <%= eMsg %> </em> <%
+        } %>
+        <div class="form-group">
+            <input type="password" class="form-control" name="oldpass" placeholder="Old password" required>
+        </div>
+        <div class="form-group">
+            <input type="password" class="form-control" name="newpass1" placeholder="New password" required>  
+        </div>
+        <div class="form-group">
+            <input type="password" class="form-control" name="newpass2" placeholder="New password confirm" required>  
+        </div>
+        <div class="form-group">
+            <input class="btn btn-lg btn-primary" type="submit" value="Change password">
+        </div>
+    </form>
+</main>
+
+
+<%- include('footer') %>

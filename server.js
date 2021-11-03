@@ -2,6 +2,7 @@ const express = require('express');
 const session = require('express-session');
 const path = require('path');
 const ejs = require('ejs');
+const sha1 = require('sha1');
 const mysql = require('mysql');
 const config = require('./config.js');
 const exp = require('constants');
@@ -87,7 +88,7 @@ app.post('/login', (req, res)=>{
         if (err) throw err;
         if (results.length == 0)
         {
-            var eMsg = 'Incorrect email/paswword!';
+            var eMsg = 'Incorrect email/password!';
             ejs.renderFile('public/index.ejs', {eMsg}, (err, data)=>{
                 if (err) throw err;
                 res.send(data);
@@ -107,11 +108,18 @@ app.post('/login', (req, res)=>{
             {
                 // login, session, update last field
                 req.session.userID = results[0].ID;
+                req.session.userName = results[0].username;
+                req.session.userEmail = results[0].email;
+                req.session.reg = results[0].reg;
                 req.session.loggedIn = true;
-
+                
                 connection.query(`UPDATE users SET last=CURRENT_TIMESTAMP WHERE ID=${req.session.userID}`, (err)=>{
                     if (err) throw err;
-                    res.redirect('/home');
+                    connection.query(`SELECT last FROM users WHERE ID=${req.session.userID}`, (err, results)=>{
+                        if (err) throw err;
+                        req.session.last = results[0].last;
+                        res.redirect('/home');
+                    });
                 });
 
             }
@@ -119,21 +127,209 @@ app.post('/login', (req, res)=>{
     });
 });
 
+app.get('/logout', (req, res)=>{
+    req.session.loggedIn = false;
+    res.redirect('/');
+});
+
 app.get('/home', (req, res)=>{
     if (req.session.loggedIn)
     {
-        res.send('Welcome here!');
+        ejs.renderFile('public/home.ejs', {username:req.session.userName}, (err, data)=>{
+            if (err) throw err;
+            res.send(data);
+        });
     }
     else
     {
         res.send('This page is only for registered users!');
     }
 })
+
 // users passmod
+app.get('/passmod', (req, res)=>{
+    if (req.session.loggedIn)
+    {
+        ejs.renderFile('public/passmod.ejs',{eMsg:''}, (err, data)=>{
+            if (err) throw err;
+            res.send(data);
+        });
+    }
+    else
+    {
+        res.send('This page is only for registered users!')
+    }
+});
+
+app.post('/passmod', (req, res)=>{
+    if (req.session.loggedIn)
+    {
+        var data = {
+            oldpass : req.body.oldpass,
+            newpass1 : req.body.newpass1,
+            newpass2 : req.body.newpass2
+        }
+        if (data.newpass1 != data.newpass2)
+        {
+            ejs.renderFile('public/passmod.ejs', {eMsg:'The new passwords are not the same!'}, (err, data)=>{
+                if (err) throw err;
+                res.send(data);
+            });
+        }
+        else
+        {
+            data.oldpass = sha1(data.oldpass); 
+            connection.query(`SELECT password FROM users WHERE ID=${req.session.userID}`, (err, results)=>{
+                if (data.oldpass != results[0].password)
+                {
+                    ejs.renderFile('public/passmod.ejs', {eMsg:'The old password is incorrect!'}, (err, data)=>{
+                        if (err) throw err;
+                        res.send(data);
+                    });
+                }
+                else
+                {
+                    data.newpass1 = sha1(data.newpass1);
+                    connection.query(`UPDATE users SET password='${data.newpass1}' WHERE ID=${req.session.userID}`, (err)=>{
+                        if (err) throw err;
+                        ejs.renderFile('public/passmod.ejs', {eMsg:'The password changed!'}, (err, data)=>{
+                            if (err) throw err;
+                            res.send(data);
+                        });
+                    });
+                }
+            });
+        }
+    }
+    else
+    {
+        res.send('This page is only for registered users!') 
+    }
+});
 
 // users profilmod
+app.get('/profilmod', (req, res)=>{
+    if (req.session.loggedIn)
+    {
+        var profilData = {
+            name : req.session.userName,
+            email : req.session.userEmail,
+            reg : req.session.reg,
+            last : req.session.last
+        }
+
+        ejs.renderFile('public/profilmod.ejs',{eMsg:'', profilData}, (err, data)=>{
+            if (err) throw err;
+            res.send(data);
+        });
+    }
+    else
+    {
+        res.send('This page is only for registered users!');
+    }
+});
+
+app.post('/profilmod', (req, res)=>{
+    if (req.session.loggedIn)
+    {
+        var data = {
+            name : req.body.username,
+            email : req.body.email
+        }
+
+        connection.query(`SELECT ID FROM users WHERE email='${data.email}' AND ID<>${req.session.userID}`, (err, results)=>{
+            if (err) throw err;
+            if (results.length > 0)
+            {
+                var profilData = {
+                    name : req.session.userName,
+                    email : req.session.userEmail,
+                    reg : req.session.reg,
+                    last : req.session.last
+                }
+                ejs.renderFile('public/profilmod.ejs',{eMsg:'This e-mail address is already regisztered!', profilData}, (err, data)=>{
+                    if (err) throw err;
+                    res.send(data);
+                });
+            }
+            else
+            {
+                connection.query(`UPDATE users SET username='${data.name}', email='${data.email}' WHERE ID=${req.session.userID}`, (err)=>{
+                    if (err) throw err;
+                    req.session.userName = data.name;
+                    req.session.userEmail = data.email;
+
+                    var profilData = {
+                        name : req.session.userName,
+                        email : req.session.userEmail,
+                        reg : req.session.reg,
+                        last : req.session.last
+                    }
+                    ejs.renderFile('public/profilmod.ejs',{eMsg:'Profile changed!', profilData}, (err, data)=>{
+                        if (err) throw err;
+                        res.send(data);
+                    });
+
+                });
+            }
+        });
+
+    }
+    else
+    {
+        res.send('This page is only for registered users!')
+    }  
+});
 
 // users stepdata management
+app.get('/newdata', (req, res)=>{
+    if (req.session.loggedIn)
+    {
+        var aktDate = getAktDate();
+
+        ejs.renderFile('public/newdata.ejs',{eMsg:'', aktDate}, (err, data)=>{
+            if (err) throw err;
+            res.send(data);
+        });
+    }
+    else
+    {
+        res.send('This page is only for registered users!');
+    }    
+});
+
+app.post('/newdata', (req, res)=>{
+    if (req.session.loggedIn)
+    {
+        var data = {
+            datum : req.body.datum,
+            stepcount : req.body.stepcount
+        }
+        connection.query(`SELECT * FROM stepdatas WHERE date=${data.datum} AND userID=${req.session.userID}`, (err, results)=>{
+            if (err) throw err;
+            if (results.length == 0)
+            {
+               // insert
+               connection.query(`INSERT INTO stepdatas VALUES(null, ${req.session.userID},'${data.datum}',${data.stepcount})`, (err)=>{
+                   if (err) throw err;
+                   res.redirect('/home'); // TODO:legközelebb majd módosítjuk
+               });
+            }
+            else
+            {
+                // update
+                connection.query(`UPDATE stepdatas SET stepcount = stepcount + ${data.stepcount} WHERE date=${data.datum} AND userID=${req.session.userID}`, (err)=>{
+                    if (err) throw err;
+                    res.redirect('/home'); // TODO:legközelebb majd módosítjuk meg ez még nem működik!!!
+                });
+            }
+        });
+    }
+    else
+    {
+        res.send('This page is only for registered users!');
+    }
+});
 
 // users statistics
 
@@ -143,3 +339,13 @@ app.get('/home', (req, res)=>{
 app.listen(port, ()=>{
     console.log(`Server listening on port ${port}...`);
 });
+
+
+function getAktDate()
+{
+    var now = new Date();
+    var aktDate = now.getFullYear() + '-' + 
+        ((now.getMonth() < 10) ? "0" + now.getMonth()+1 : now.getMonth()+1) + '-' + 
+        ((now.getDate() < 10) ? "0" + now.getDate() : now.getDate());
+    return aktDate;
+}
