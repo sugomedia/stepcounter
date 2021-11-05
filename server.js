@@ -305,22 +305,22 @@ app.post('/newdata', (req, res)=>{
             datum : req.body.datum,
             stepcount : req.body.stepcount
         }
-        connection.query(`SELECT * FROM stepdatas WHERE date=${data.datum} AND userID=${req.session.userID}`, (err, results)=>{
+        connection.query(`SELECT * FROM stepdatas WHERE date='${data.datum}' AND userID=${req.session.userID}`, (err, results)=>{
             if (err) throw err;
             if (results.length == 0)
             {
                // insert
                connection.query(`INSERT INTO stepdatas VALUES(null, ${req.session.userID},'${data.datum}',${data.stepcount})`, (err)=>{
                    if (err) throw err;
-                   res.redirect('/home'); // TODO:legközelebb majd módosítjuk
+                   res.redirect('/tableview'); 
                });
             }
             else
             {
                 // update
-                connection.query(`UPDATE stepdatas SET stepcount = stepcount + ${data.stepcount} WHERE date=${data.datum} AND userID=${req.session.userID}`, (err)=>{
+                connection.query(`UPDATE stepdatas SET stepcount = stepcount + ${data.stepcount} WHERE date='${data.datum}' AND userID=${req.session.userID}`, (err)=>{
                     if (err) throw err;
-                    res.redirect('/home'); // TODO:legközelebb majd módosítjuk meg ez még nem működik!!!
+                    res.redirect('/tableview'); 
                 });
             }
         });
@@ -331,10 +331,35 @@ app.post('/newdata', (req, res)=>{
     }
 });
 
-// users statistics
+// users statistics 
+app.get('/tableview', (req, res)=>{
+    if (req.session.loggedIn)
+    {
+        //TODO: a dateformat nincs megoldva!!!
+        connection.query(`SELECT * FROM stepdatas WHERE userID=${req.session.userID} ORDER BY date DESC`, (err, results)=>{
+            if (err) throw err;
+            ejs.renderFile('public/tableview.ejs', {results}, (err, data)=>{
+                if (err) throw err;
+                res.send(data);
+            });
+        });
+    }
+    else
+    {
+        res.send('This page is only for registered users!');
+    }     
+});
+
+app.get('/deletestep/:id', (req, res)=>{
+    var id = req.params.id;
+    connection.query(`DELETE FROM stepdatas WHERE ID=${id}`, (err)=>{
+        if (err) throw err;
+        res.redirect('/tableview');
+    });
+});
 
 
-// admin
+// admin - users management
 
 app.listen(port, ()=>{
     console.log(`Server listening on port ${port}...`);
