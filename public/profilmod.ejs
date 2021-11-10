@@ -3,7 +3,7 @@
 <%- include('menu') %>
  
 <main class="form-signin">
-    <form action="/profilmod" method="POST">
+    <form action="/profilmod" method="POST" enctype="multipart/form-data">
         <h1 class="h3 mb-3 fw-normal">Profil change</h1>
         <% if (eMsg) {
             %> <em> <%= eMsg %> </em> <%
@@ -15,12 +15,15 @@
             <input type="email" class="form-control" name="email" value="<%= profilData.email %>" placeholder="E-mail address" required>
         </div>
         <div class="form-group">
+            <input type="file" class="form-control" name="profilPicture" accept="image/*">
+        </div>
+        <div class="form-group">
             <label for="reg">Registration date:</label>
-            <input type="text" class="form-control" name="reg" value="<%= profilData.reg %>" disabled>  
+            <input type="text" class="form-control" name="reg" value="<%= moment(profilData.reg).format('YYYY-MM-DD H:mm:ss') %>" disabled>  
         </div>
         <div class="form-group">
             <label for="last">Last login date:</label>
-            <input type="text" class="form-control" name="last" value="<%= profilData.last %>" disabled>  
+            <input type="text" class="form-control" name="last" value="<%= moment(profilData.last, "YYYYMMDD").fromNow();   %>" disabled>  
         </div>
         <div class="form-group">
             <input class="btn btn-lg btn-primary" type="submit" value="Modify profil">

@@ -1,0 +1,42 @@
+<%- include('header') %>
+
+<%- include('menu') %>
+
+<script>
+    window.onload = function () {
+    
+    var chart = new CanvasJS.Chart("chartContainer", {
+        animationEnabled: true,
+        exportEnabled: true,
+        theme: "light1", // "light1", "light2", "dark1", "dark2"
+        title:{
+            text: "Stepdata chart"
+        },
+          axisY: {
+          includeZero: true
+        },
+        data: [{
+            type: "column", 
+            dataPoints: 
+            [ 
+               <%- str %> 
+            ]
+           
+        }]
+    });
+
+    chart.render();
+    
+    }
+</script>
+
+
+<main class="container" >
+   
+        <h1 class="h3 mb-3 fw-normal">Chart view - stepdatas</h1>
+       
+        <div id="chartContainer"></div>
+</main>
+
+
+<%- include('footer') %>

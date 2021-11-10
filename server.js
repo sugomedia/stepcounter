@@ -1,9 +1,11 @@
 const express = require('express');
 const session = require('express-session');
+const fileUpload = require('express-fileupload');
 const path = require('path');
 const ejs = require('ejs');
 const sha1 = require('sha1');
 const mysql = require('mysql');
+const moment = require('moment');
 const config = require('./config.js');
 const exp = require('constants');
 const port = process.env.PORT || 8088;
@@ -17,6 +19,7 @@ app.use(session({
     resave: true,
     saveUninitialized: true
 }));
+app.use(fileUpload());
 
 // connect to mysql database
 var connection = mysql.createConnection(config.dbDev);
@@ -218,7 +221,7 @@ app.get('/profilmod', (req, res)=>{
             last : req.session.last
         }
 
-        ejs.renderFile('public/profilmod.ejs',{eMsg:'', profilData}, (err, data)=>{
+        ejs.renderFile('public/profilmod.ejs',{eMsg:'', profilData, moment}, (err, data)=>{
             if (err) throw err;
             res.send(data);
         });
@@ -237,6 +240,15 @@ app.post('/profilmod', (req, res)=>{
             email : req.body.email
         }
 
+        if (req.files && Object.keys(req.files).length != 0) {
+            var sampleFile =  req.files.profilPicture;
+            var uploadPath = __dirname + '/public/uploads/' + sampleFile.name;
+            sampleFile.mv(uploadPath, (err) => {
+                if (err) throw err;
+                console.log('File uploaded to ' + uploadPath);
+            });
+        }
+
         connection.query(`SELECT ID FROM users WHERE email='${data.email}' AND ID<>${req.session.userID}`, (err, results)=>{
             if (err) throw err;
             if (results.length > 0)
@@ -247,7 +259,7 @@ app.post('/profilmod', (req, res)=>{
                     reg : req.session.reg,
                     last : req.session.last
                 }
-                ejs.renderFile('public/profilmod.ejs',{eMsg:'This e-mail address is already regisztered!', profilData}, (err, data)=>{
+                ejs.renderFile('public/profilmod.ejs',{eMsg:'This e-mail address is already regisztered!', profilData, moment}, (err, data)=>{
                     if (err) throw err;
                     res.send(data);
                 });
@@ -265,7 +277,7 @@ app.post('/profilmod', (req, res)=>{
                         reg : req.session.reg,
                         last : req.session.last
                     }
-                    ejs.renderFile('public/profilmod.ejs',{eMsg:'Profile changed!', profilData}, (err, data)=>{
+                    ejs.renderFile('public/profilmod.ejs',{eMsg:'Profile changed!', profilData, moment}, (err, data)=>{
                         if (err) throw err;
                         res.send(data);
                     });
@@ -335,10 +347,9 @@ app.post('/newdata', (req, res)=>{
 app.get('/tableview', (req, res)=>{
     if (req.session.loggedIn)
     {
-        //TODO: a dateformat nincs megoldva!!!
         connection.query(`SELECT * FROM stepdatas WHERE userID=${req.session.userID} ORDER BY date DESC`, (err, results)=>{
             if (err) throw err;
-            ejs.renderFile('public/tableview.ejs', {results}, (err, data)=>{
+            ejs.renderFile('public/tableview.ejs', {results, moment}, (err, data)=>{
                 if (err) throw err;
                 res.send(data);
             });
@@ -348,6 +359,57 @@ app.get('/tableview', (req, res)=>{
     {
         res.send('This page is only for registered users!');
     }     
+});
+
+app.get('/chartview', (req, res)=>{
+    if (req.session.loggedIn)
+    {
+        connection.query(`SELECT date, stepcount FROM stepdatas WHERE userID=${req.session.userID} ORDER BY date ASC`, (err, results)=>{
+            if (err) throw err;
+
+            let str = '';
+            results.forEach(element => {
+                str += `{ label: '${moment(element.date).format('YYYY-MM-DD')}', y: ${element.stepcount} },`;
+            });
+            
+            str = str.substr(0, str.length-1);
+          
+            ejs.renderFile('public/chartview.ejs', {str}, (err, data)=>{
+                if (err) throw err;
+                res.send(data);
+            });
+        });
+    }
+    else
+    {
+        res.send('This page is only for registered users!');
+    }   
+});
+
+app.get('/calendarview', (req, res)=>{
+    if (req.session.loggedIn)
+    {
+        connection.query(`SELECT date, stepcount FROM stepdatas WHERE userID=${req.session.userID}`, (err, results)=>{
+            if (err) throw err;
+
+            let str = '';
+            results.forEach(element => {
+                str += `{ start: '${moment(element.date).format('YYYY-MM-DD')}', title: '${element.stepcount}' },`;
+            });
+            
+            str = str.substr(0, str.length-1);
+            let aktDate = getAktDate();
+
+            ejs.renderFile('public/calendarview.ejs', {str, aktDate}, (err, data)=>{
+                if (err) throw err;
+                res.send(data);
+            });
+        });
+    }
+    else
+    {
+        res.send('This page is only for registered users!');
+    }   
 });
 
 app.get('/deletestep/:id', (req, res)=>{
